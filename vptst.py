@@ -29,6 +29,7 @@ start_date = end_date - selected_time_interval
 stock_symbols = [symbol.strip() for symbol in stock_symbols.split(',')]
 stock_data = {}
 def vpt():
+    st.write("volume price trend indicator")
     for symbol in stock_symbols:
         df = yf.download(symbol, start=start_date, end=end_date)
         df['VPT'] = 0  
@@ -54,6 +55,8 @@ def vpt():
         st.pyplot(fig)
 
 def moving():
+
+    st.write("Moving averages")
     stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
     moving_average_period = avg_input  # Change to your desired moving average period
 
@@ -107,6 +110,7 @@ def calculate_rsi(data, period):
 
     return rsi
 def rsi():
+    st.write("RSI Index")
     stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
 
     # Calculate RSI for the stock data
@@ -129,6 +133,35 @@ def rsi():
     ax.legend()
     st.pyplot(fig)
 
+def MACD():
+
+    st.write("Moving Average Convergence Divergence")
+    data = yf.download(stock_symbols, start=start_date, end=end_date)
+
+    # Calculate the 12-period and 26-period exponential moving averages (EMAs)
+    data['EMA12'] = data['Close'].ewm(span=12, adjust=False).mean()
+    data['EMA26'] = data['Close'].ewm(span=26, adjust=False).mean()
+
+    # Calculate the MACD line
+    data['MACD'] = data['EMA12'] - data['EMA26']
+    # Calculate the 9-period signal line
+    data['Signal_Line'] = data['MACD'].ewm(span=9, adjust=False).mean()
+
+    # Plot the MACD and Signal Line
+    st.subheader(f'{stock_symbols}')
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(data.index, data['MACD'], label=stock_symbols)
+    ax.plot(data.index, data['Signal_Line'], label=stock_symbols, color='black')
+    ax.set_title(f'MACD for {stock_symbols}')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('MACD Value')
+    ax.grid(True)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
+    plt.xticks(rotation=45)
+    ax.legend()
+    st.pyplot(fig)
+
 vpt()
 moving()
 rsi()
+MACD()
