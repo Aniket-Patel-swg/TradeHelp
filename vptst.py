@@ -120,9 +120,38 @@ def rsi():
     ax.plot(stock_data.index, stock_data['Close'], label=stock_symbols, color='black')
     ax.axhline(y=70, color='red', linestyle='--', label='Overbought (70)')
     ax.axhline(y=30, color='green', linestyle='--', label='Oversold (30)')
-    ax.set_title(f'Volume Price Trend (VPT) for {stock_symbols}')
+    ax.set_title(f'Relative Strenth Index (RSI) for {stock_symbols}')
     ax.set_xlabel('Date')
     ax.set_ylabel('VPT Value')
+    ax.grid(True)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
+    plt.xticks(rotation=45)
+    ax.legend()
+    st.pyplot(fig)
+
+def calculate_mfi(data, period=14):
+    typical_price = (data['High'] + data['Low'] + data['Close']) / 3
+    raw_money_flow = typical_price * data['Volume']
+    
+    positive_flow = (raw_money_flow.where(data['Close'] > data['Close'].shift(1), 0)).rolling(window=period).sum()
+    negative_flow = (raw_money_flow.where(data['Close'] < data['Close'].shift(1), 0)).rolling(window=period).sum()
+    
+    money_flow_ratio = positive_flow / negative_flow
+    mfi = 100 - (100 / (1 + money_flow_ratio))
+    
+    return mfi
+def mfi():
+    stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
+    mfi_period = 14  # You can adjust this period as needed
+    stock_data['MFI'] = calculate_mfi(stock_data, period=mfi_period)
+    st.subheader(f'{stock_symbols}')
+    fig, ax = plt.subplots(figsize=(12, 6))
+    plt.plot(stock_data.index, stock_data['MFI'], label='MFI', color='purple')
+    plt.axhline(y=70, color='red', linestyle='--', label='Overbought (70)')
+    plt.axhline(y=30, color='green', linestyle='--', label='Oversold (30)')
+    ax.set_title(f'Money Flow Index (MFI) for {stock_symbols}')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('MFI Value')
     ax.grid(True)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
     plt.xticks(rotation=45)
@@ -132,3 +161,4 @@ def rsi():
 vpt()
 moving()
 rsi()
+mfi()
