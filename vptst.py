@@ -158,7 +158,26 @@ def mfi():
     ax.legend()
     st.pyplot(fig)
 
+def roc():
+    stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
+    roc_period = 1  # You can adjust this period as needed
+    stock_data['ROC'] = ((stock_data['Close'] - stock_data['Close'].shift(roc_period)) / stock_data['Close'].shift(roc_period)) * 100
+
+    st.subheader(f'{stock_symbols}')
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(stock_data.index, stock_data['ROC'], label=stock_symbols)
+    ax.set_title(f'Rate of Change (ROC) for {stock_symbols}')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('ROC Value')
+    ax.grid(True)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
+    plt.xticks(rotation=45)
+    ax.legend()
+    st.pyplot(fig)
+
+
 vpt()
 moving()
 rsi()
 mfi()
+roc()
