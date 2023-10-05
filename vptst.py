@@ -164,28 +164,17 @@ def mfi():
     ax.legend()
     st.pyplot(fig)
 
-def MACD():
+def roc():
+    stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
+    roc_period = 1  # You can adjust this period as needed
+    stock_data['ROC'] = ((stock_data['Close'] - stock_data['Close'].shift(roc_period)) / stock_data['Close'].shift(roc_period)) * 100
 
-    st.write("Moving Average Convergence Divergence")
-    data = yf.download(stock_symbols, start=start_date, end=end_date)
-
-    # Calculate the 12-period and 26-period exponential moving averages (EMAs)
-    data['EMA12'] = data['Close'].ewm(span=12, adjust=False).mean()
-    data['EMA26'] = data['Close'].ewm(span=26, adjust=False).mean()
-
-    # Calculate the MACD line
-    data['MACD'] = data['EMA12'] - data['EMA26']
-    # Calculate the 9-period signal line
-    data['Signal_Line'] = data['MACD'].ewm(span=9, adjust=False).mean()
-
-    # Plot the MACD and Signal Line
     st.subheader(f'{stock_symbols}')
     fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(data.index, data['MACD'], label=stock_symbols)
-    ax.plot(data.index, data['Signal_Line'], label=stock_symbols, color='black')
-    ax.set_title(f'MACD for {stock_symbols}')
+    ax.plot(stock_data.index, stock_data['ROC'], label=stock_symbols)
+    ax.set_title(f'Rate of Change (ROC) for {stock_symbols}')
     ax.set_xlabel('Date')
-    ax.set_ylabel('MACD Value')
+    ax.set_ylabel('ROC Value')
     ax.grid(True)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
     plt.xticks(rotation=45)
@@ -218,9 +207,39 @@ def bollinger():
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
     st.pyplot(fig)
 
+def MACD():
+
+    st.write("Moving Average Convergence Divergence")
+    data = yf.download(stock_symbols, start=start_date, end=end_date)
+
+    # Calculate the 12-period and 26-period exponential moving averages (EMAs)
+    data['EMA12'] = data['Close'].ewm(span=12, adjust=False).mean()
+    data['EMA26'] = data['Close'].ewm(span=26, adjust=False).mean()
+
+    # Calculate the MACD line
+    data['MACD'] = data['EMA12'] - data['EMA26']
+    # Calculate the 9-period signal line
+    data['Signal_Line'] = data['MACD'].ewm(span=9, adjust=False).mean()
+
+    # Plot the MACD and Signal Line
+    st.subheader(f'{stock_symbols}')
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(data.index, data['MACD'], label=stock_symbols)
+    ax.plot(data.index, data['Signal_Line'], label=stock_symbols, color='black')
+    ax.set_title(f'MACD for {stock_symbols}')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('MACD Value')
+    ax.grid(True)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
+    plt.xticks(rotation=45)
+    ax.legend()
+    st.pyplot(fig)
+
 vpt()
 moving()
 rsi()
 MACD()
 mfi()
+roc()
 bollinger()
+
