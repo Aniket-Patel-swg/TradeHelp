@@ -5,7 +5,6 @@ import yfinance as yf
 from datetime import datetime, timedelta
 from matplotlib.dates import DateFormatter
 
-
 st.write('Welcome to our python project, trade help')
 stock_input = st.sidebar.text_input("Enter Stock", "FEDERALBNK")
 time_input = st.sidebar.selectbox("Select Time",['1D','5D','1M','3M','6M','1Y','5Y'])
