@@ -79,6 +79,4 @@ def mfi():
         st.subheader("Sell Options")
         st.dataframe(sell_signals[['MFI']])
 
-
-
 mfi()

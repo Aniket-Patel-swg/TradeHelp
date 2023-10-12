@@ -12,13 +12,15 @@ st.sidebar.header('User Input')
 time_input = st.sidebar.selectbox("Select Time",['1D','5D','1M','3M','6M','1Y','5Y'])
 avg_input = st.sidebar.selectbox("Select Days",[9,20,44,50,100,200])
 
+buysell=[]
+
 large_avg_input = st.sidebar.text_input("Enter Large Moving Average", "50")
 small_avg_input = st.sidebar.text_input("Enter Small Moving Average", "20")
 large_avg_input=int(large_avg_input)
 small_avg_input=int(small_avg_input)
 
 # User input for stock symbols and date range
-stock_symbols = st.sidebar.text_input("Enter Stock Symbols (comma-separated)", "AAPL")
+stock_symbols = st.sidebar.selectbox("Enter Stock Symbols (comma-separated)", ["AAPL","SBI","GOOGL","TSLA"])
 time_interval_mapping = {
     '1D': timedelta(days=1),
     '5D': timedelta(days=5),
@@ -88,6 +90,13 @@ def vpt():
             st.subheader(f"Sell Options for {symbol}")
             st.dataframe(sell_options)
 
+        last_signal = None
+    if not df.empty:
+        last_signal = "Buy" if df['Buy_Signal'].iloc[-1] == 1 else "Sell" if df['Sell_Signal'].iloc[-1] == -1 else "Hold"
+
+    buysell.append("VPT: "+last_signal)
+
+
 def moving():
     stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
 
@@ -136,6 +145,14 @@ def moving():
 
     st.subheader("Sell Signals (SMA < EMA)")
     st.dataframe(sell_points[['Close', 'SMA', 'EMA']])
+
+    # Calculate the final recommendation based on the last data point for the entire time range
+    last_signal = None
+    if not stock_data.empty:
+        last_signal = "Buy" if stock_data['Buy_Signal'].iloc[-1] == 1 else "Sell" if stock_data['Sell_Signal'].iloc[-1] == -1 else "Hold"
+
+    buysell.append("Moving Avrages: "+last_signal)
+
 
 def calculate_rsi(data, period):
     delta = data['Close'].diff(1)
@@ -188,6 +205,15 @@ def rsi():
 
     st.subheader("Sell Signals (RSI > 70)")
     st.dataframe(sell_points[sell_points['RSI'] > 70][['Close', 'RSI']])
+
+    last_buy_signal = stock_data['Buy_Signal'].iloc[-1]
+    last_sell_signal = stock_data['Sell_Signal'].iloc[-1]
+    last_signal = None
+    if not stock_data.empty:
+        last_signal = "Buy" if stock_data['Buy_Signal'].iloc[-1] == 1 else "Sell" if stock_data['Sell_Signal'].iloc[-1] == -1 else "Hold"
+
+    buysell.append("RSI: "+last_signal)
+
 def calculate_mfi(data, period=14):
     typical_price = (data['High'] + data['Low'] + data['Close']) / 3
     raw_money_flow = typical_price * data['Volume']
@@ -242,6 +268,13 @@ def mfi():
         st.subheader("Sell Options (MFI > 70)")
         st.dataframe(sell_signals[['MFI']])
 
+    last_signal = None
+    if not stock_data.empty:
+        last_signal = "Buy" if stock_data['Buy_Signal'].iloc[-1] == 1 else "Sell" if stock_data['Sell_Signal'].iloc[-1] == -1 else "Hold"
+
+    buysell.append("MFI: "+last_signal)
+
+
 def roc():
     stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
     roc_period = 1  # You can adjust this period as needed
@@ -284,6 +317,13 @@ def roc():
     if not sell_options.empty:
         st.subheader("Sell Options (ROC < 0))")
         st.dataframe(sell_options)
+
+    last_signal = None
+    if not stock_data.empty:
+        last_signal = "Buy" if stock_data['Buy_Signal'].iloc[-1] == 1 else "Sell" if stock_data['Sell_Signal'].iloc[-1] == -1 else "Hold"
+
+    buysell.append("ROC: "+last_signal)
+
 
 def bollinger():
 
@@ -330,6 +370,13 @@ def bollinger():
     st.subheader("Sell Signals Closing>Upper Bollinger Band")
     st.dataframe(sell_signals)
 
+    last_signal = None
+    if not df.empty:
+        last_signal = "Buy" if df['Buy_Signal'].iloc[-1] == 1 else "Sell" if df['Sell_Signal'].iloc[-1] == -1 else "Hold"
+
+    buysell.append("Bollinger: "+last_signal)
+
+
 def MACD():
 
     data = yf.download(stock_symbols, start=start_date, end=end_date)
@@ -373,15 +420,20 @@ def MACD():
 
     st.subheader("Sell Signals Closing<Signal Line")
     st.dataframe(sell_signals)
+    
+    last_signal = None
+    if not data.empty:
+        last_signal = "Buy" if data['Buy_Signal'].iloc[-1] == 1 else "Sell" if data['Sell_Signal'].iloc[-1] == -1 else "Hold"
+
+    buysell.append("MACD: "+last_signal)
 
 MACD()
-
 bollinger()
 vpt()
 moving()
 rsi()
-MACD()
 mfi()
 roc()
-bollinger()
+
+st.text('Recommendation: '+str(buysell))
 
