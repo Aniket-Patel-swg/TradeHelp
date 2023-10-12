@@ -150,6 +150,7 @@ def calculate_rsi(data, period):
 
     return rsi
 def rsi():
+    st.write("RSI Index")
     stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
 
     rsi_period = avg_input
@@ -199,6 +200,8 @@ def calculate_mfi(data, period=14):
     
     return mfi
 def mfi():
+
+    st.write('Money Flow Index')
     stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
     mfi_period = 14  # You can adjust this period as needed
     stock_data['MFI'] = calculate_mfi(stock_data, period=mfi_period)
@@ -377,5 +380,8 @@ bollinger()
 vpt()
 moving()
 rsi()
+MACD()
 mfi()
 roc()
+bollinger()
+
