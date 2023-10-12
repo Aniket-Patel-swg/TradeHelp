@@ -28,9 +28,6 @@ start_date = end_date - selected_time_interval
 stock_symbols = [symbol.strip() for symbol in stock_symbols.split(',')]
 stock_data = {}
 # Download historical stock data using yfinance
-stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
-
-# Calculate MFI
 def calculate_mfi(data, period=14):
     typical_price = (data['High'] + data['Low'] + data['Close']) / 3
     raw_money_flow = typical_price * data['Volume']
@@ -42,20 +39,46 @@ def calculate_mfi(data, period=14):
     mfi = 100 - (100 / (1 + money_flow_ratio))
     
     return mfi
+def mfi():
+    stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
+    mfi_period = 14  # You can adjust this period as needed
+    stock_data['MFI'] = calculate_mfi(stock_data, period=mfi_period)
 
-# Calculate MFI for the stock data
-mfi_period = 14  # You can adjust this period as needed
-stock_data['MFI'] = calculate_mfi(stock_data, period=mfi_period)
-st.subheader(f'{stock_symbols}')
-fig, ax = plt.subplots(figsize=(12, 6))
-plt.plot(stock_data.index, stock_data['MFI'], label='MFI', color='purple')
-plt.axhline(y=70, color='red', linestyle='--', label='Overbought (70)')
-plt.axhline(y=30, color='green', linestyle='--', label='Oversold (30)')
-ax.set_title(f'Money Flow Index (MFI) for {stock_symbols}')
-ax.set_xlabel('Date')
-ax.set_ylabel('MFI Value')
-ax.grid(True)
-ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
-plt.xticks(rotation=45)
-ax.legend()
-st.pyplot(fig)
+    # Add buy/sell signals based on MFI values
+    stock_data['Buy_Signal'] = (stock_data['MFI'] < 30) & (stock_data['MFI'].shift(1) >= 30)
+    stock_data['Sell_Signal'] = (stock_data['MFI'] > 70) & (stock_data['MFI'].shift(1) <= 70)
+
+    st.subheader(f'{stock_symbols}')
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Plot MFI
+    ax.plot(stock_data.index, stock_data['MFI'], label='MFI', color='purple')
+
+    # Plot buy/sell signals using scatter plots
+    buy_signals = stock_data[stock_data['Buy_Signal']]
+    sell_signals = stock_data[stock_data['Sell_Signal']]
+    
+    ax.scatter(buy_signals.index, buy_signals['MFI'], marker='^', color='g', label='Buy Signal', s=100)
+    ax.scatter(sell_signals.index, sell_signals['MFI'], marker='v', color='r', label='Sell Signal', s=100)
+
+    ax.set_title(f'Money Flow Index (MFI) for {stock_symbols}')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('MFI Value')
+    ax.grid(True)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-d'))  # Format the date ticks
+    plt.xticks(rotation=45)
+    ax.legend()
+    st.pyplot(fig)
+
+    # Display buy/sell options
+    if not buy_signals.empty:
+        st.subheader("Buy Options")
+        st.dataframe(buy_signals[['MFI']])
+
+    if not sell_signals.empty:
+        st.subheader("Sell Options")
+        st.dataframe(sell_signals[['MFI']])
+
+
+
+mfi()

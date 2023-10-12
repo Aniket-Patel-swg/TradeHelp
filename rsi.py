@@ -5,6 +5,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 from matplotlib.dates import DateFormatter
+import numpy as np
 
 # Define the stock symbol and time period
 st.sidebar.header('User Input')
@@ -43,22 +44,43 @@ def calculate_rsi(data, period):
 
     return rsi
 
-# Calculate RSI for the stock data
-rsi_period = avg_input  # You can adjust this period as needed
-stock_data['RSI'] = calculate_rsi(stock_data, period=rsi_period)
+def rsi():
+    stock_data = yf.download(stock_symbol, start=start_date, end=end_date)
 
-# Create a Matplotlib figure
-st.subheader(f'{stock_symbol}')
-fig, ax = plt.subplots(figsize=(12, 6))
-ax.plot(stock_data.index, stock_data['RSI'], label=stock_symbol)
-ax.plot(stock_data.index, stock_data['Close'], label=stock_symbol, color='black')
-ax.axhline(y=70, color='red', linestyle='--', label='Overbought (70)')
-ax.axhline(y=30, color='green', linestyle='--', label='Oversold (30)')
-ax.set_title(f'Volume Price Trend (VPT) for {stock_symbol}')
-ax.set_xlabel('Date')
-ax.set_ylabel('VPT Value')
-ax.grid(True)
-ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
-plt.xticks(rotation=45)
-ax.legend()
-st.pyplot(fig)
+    rsi_period = avg_input
+    stock_data['RSI'] = calculate_rsi(stock_data, period=rsi_period)
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(stock_data.index, stock_data['RSI'], label='RSI')
+    ax.plot(stock_data.index, stock_data['Close'], label='Close', color='black')
+    ax.axhline(y=70, color='red', linestyle='--', label='Overbought (70)')
+    ax.axhline(y=30, color='green', linestyle='--', label='Oversold (30)')
+    ax.set_title(f'Relative Strength Index (RSI) for {stock_symbol}')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('RSI Value')
+    ax.grid(True)
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+    plt.xticks(rotation=45)
+    ax.legend()
+
+    # Calculate Buy/Sell signals based on RSI, considering values greater than 70 and less than 30
+    stock_data['Buy_Signal'] = np.where(stock_data['RSI'] < 30, 1, 0)
+    stock_data['Sell_Signal'] = np.where(stock_data['RSI'] > 70, -1, 0)
+
+    # Plot Buy/Sell signals on the RSI plot
+    buy_points = stock_data[stock_data['Buy_Signal'] == 1]
+    sell_points = stock_data[stock_data['Sell_Signal'] == -1]
+
+    ax.scatter(buy_points.index, buy_points['RSI'], marker='^', color='green', label='Buy Signal', alpha=1)
+    ax.scatter(sell_points.index, sell_points['RSI'], marker='v', color='red', label='Sell Signal', alpha=1)
+
+    st.pyplot(fig)
+
+    # Display Buy/Sell options for RSI values greater than 70 or less than 30
+    st.subheader("Buy Signals (RSI < 30)")
+    st.dataframe(buy_points[buy_points['RSI'] < 30][['Close', 'RSI']])
+
+    st.subheader("Sell Signals (RSI > 70)")
+    st.dataframe(sell_points[sell_points['RSI'] > 70][['Close', 'RSI']])
+
+rsi()

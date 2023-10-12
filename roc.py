@@ -29,21 +29,15 @@ start_date = end_date - selected_time_interval
 # Download historical stock data using yfinance
 stock_data = yf.download(stock_symbol, start=start_date, end=end_date)
 
-# Calculate ROC
-def calculate_roc(data, period=1):
-    data['ROC'] = ((data['Close'] - data['Close'].shift(period)) / data['Close'].shift(period)) * 100
-    return data['ROC']
-
-# Calculate ROC for the stock data
 roc_period = 1  # You can adjust this period as needed
-stock_data['ROC'] = calculate_roc(stock_data, period=roc_period)
+stock_data['ROC'] = ((stock_data['Close'] - stock_data['Close'].shift(roc_period)) / stock_data['Close'].shift(roc_period)) * 100
 
 st.subheader(f'{stock_symbol}')
 fig, ax = plt.subplots(figsize=(12, 6))
 ax.plot(stock_data.index, stock_data['ROC'], label=stock_symbol)
-ax.set_title(f'Volume Price Trend (VPT) for {stock_symbol}')
+ax.set_title(f'Rate of Change (ROC) for {stock_symbol}')
 ax.set_xlabel('Date')
-ax.set_ylabel('VPT Value')
+ax.set_ylabel('ROC Value')
 ax.grid(True)
 ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))  # Format the date ticks
 plt.xticks(rotation=45)

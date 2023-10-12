@@ -1,18 +1,23 @@
-import streamlit as st
-from matplotlib import pyplot as plt
-import pandas as pd
 import yfinance as yf
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import streamlit as st
+import pandas as pd
 from datetime import datetime, timedelta
 from matplotlib.dates import DateFormatter
+import numpy as np
 
-
-st.write('Welcome to our python project, trade help')
-stock_input = st.sidebar.text_input("Enter Stock", "FEDERALBNK")
 time_input = st.sidebar.selectbox("Select Time",['1D','5D','1M','3M','6M','1Y','5Y'])
+avg_input = st.sidebar.selectbox("Select Days",[9,20,44,50,100,200])
 
-symbol=stock_input
+large_avg_input = st.sidebar.text_input("Enter Large Moving Average", "50")
+small_avg_input = st.sidebar.text_input("Enter Small Moving Average", "20")
 
-# Define a dictionary to map time intervals to timedelta objects
+
+large_avg_input = int(large_avg_input)
+small_avg_input = int(small_avg_input)
+# User input for stock symbols and date range
+stock_symbols = st.sidebar.text_input("Enter Stock Symbols (comma-separated)", "AAPL")
 time_interval_mapping = {
     '1D': timedelta(days=1),
     '5D': timedelta(days=5),
@@ -20,61 +25,68 @@ time_interval_mapping = {
     '3M': timedelta(days=90),
     '6M': timedelta(days=180),
     '1Y': timedelta(days=365),  # Assuming 1 year is approximately 365 days
-    '5Y': timedelta(days=5 * 365),  # Assuming 5 years is approximately 5 * 365 days
+    '5Y': timedelta(days=5 * 365),  
 }
 
-# Get the timedelta object for the selected time interval
-selected_time_interval = time_interval_mapping.get(time_input, timedelta(days=1))  # Default to 1 day if not found
+selected_time_interval = time_interval_mapping.get(time_input, timedelta(days=1))
+end_date = datetime.now().date()
+start_date = end_date - selected_time_interval
+stock_symbols = [symbol.strip() for symbol in stock_symbols.split(',')]
 
-# Calculate the start_date by subtracting the selected time interval from today's date
-today_date = datetime.now().date()
-start_date = today_date - selected_time_interval
+def moving():
+    stock_data = yf.download(stock_symbols, start=start_date, end=end_date)
 
-# Format the start_date as a string in 'YYYY-MM-DD' format
-start_date_str = start_date.strftime('%Y-%m-%d')
+    moving_average_period = avg_input
 
-starting_date = start_date_str
-end_date = today_date
+    stock_data['SMA'] = stock_data['Close'].rolling(window=large_avg_input).mean()
+    stock_data['EMA'] = stock_data['Close'].ewm(span=small_avg_input, adjust=False).mean()
+    # stock_data['EMA'] = stock_data['Close'].ewm(span=moving_average_period, adjust=False).mean()
 
-st.write('your start date is',starting_date)
-st.write('todays date is',today_date)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    date_format = DateFormatter("%Y-%m-d")
 
+    ax.plot(stock_data.index, stock_data['EMA'], label=f'EMA ({time_input})', color='blue')
+    ax.plot(stock_data.index, stock_data['Close'], label=f'Close ({time_input})', color='red')
+    ax.plot(stock_data.index, stock_data['SMA'], label=f'SMA ({time_input})', color='black')
 
-dfs = [yf.download(symbol, period=interval) for interval in time_input]
-
-# Create subplots with shared x-axis
-fig, axes = plt.subplots(len(time_input), 1, figsize=(12, 6 * len(time_input)), sharex=True)
-
-# Customize date formatting
-date_format = DateFormatter("%Y-%m-%d")
-
-# Plot each time interval on a separate subplot
-for i, interval in enumerate(time_input):
-    ax = axes[i]
-    df = dfs[i]
-    
-    # Extract the date and closing price columns
-    dates = df.index
-    close_prices = df['Close']
-    
-    # Plotting the stock data
-    ax.plot(dates, close_prices, label=f'Stock Price ({interval})', color='blue')
-    
-    # Adding labels and title
     ax.set_ylabel('Price')
-    ax.set_title(f'Stock Price Over Time ({interval})')
-    
-    # Customize date formatting for the x-axis
+    ax.set_title(f'Stock Price Over Time ({time_input})')
     ax.xaxis.set_major_formatter(date_format)
-
-    # Adding a legend
     ax.legend()
+    ax.set_xlabel('Date')
 
-# Customize the x-axis label for the bottom subplot
-axes[-1].set_xlabel('Date')
+    stock_data['Buy_Signal'] = np.where(
+    (stock_data['SMA'] > stock_data['EMA']) & 
+    ((stock_data['Close'] >= stock_data['SMA'] - 0.1 * stock_data['SMA']) | (stock_data['Close'] <= stock_data['EMA'] + 0.1 * stock_data['EMA'])),
+    1, 0)
 
-# Adjust layout spacing
-plt.tight_layout()
+    stock_data['Sell_Signal'] = np.where(
+    (stock_data['SMA'] < stock_data['EMA']) & 
+    ((stock_data['Close'] >= stock_data['EMA'] - 0.1 * stock_data['EMA']) | (stock_data['Close'] <= stock_data['SMA'] + 0.1 * stock_data['SMA'])),
+    -1, 0)
 
-# Display the plot
-plt.show()
+    
+    # Plot Buy/Sell signals
+    buy_points = stock_data[stock_data['Buy_Signal'] == 1]
+    sell_points = stock_data[stock_data['Sell_Signal'] == -1]
+
+    ax.scatter(buy_points.index, buy_points['Close'], marker='^', color='green', label='Buy Signal', alpha=1)
+    ax.scatter(sell_points.index, sell_points['Close'], marker='v', color='red', label='Sell Signal', alpha=1)
+
+    st.pyplot(fig)
+
+    # Calculate the final recommendation based on the last data point for the entire time range
+    last_buy_signal = stock_data['Buy_Signal'].iloc[-1]
+    last_sell_signal = stock_data['Sell_Signal'].iloc[-1]
+    if last_buy_signal == 1:
+        final_recommendation = 'Buy'
+    elif last_sell_signal == -1:
+        final_recommendation = 'Sell'
+    else:
+        final_recommendation = 'No Signal'
+
+    # Display the final recommendation at the end of the plot
+    st.write(f"Final Recommendation: {final_recommendation}")
+
+# Call the moving function to display the plot and calculate the final recommendation
+moving()
